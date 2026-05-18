@@ -193,20 +193,29 @@ map.on("load", async () => {
       "line-opacity": 0.95
     }
   });
-  map.addLayer({
-    id: "district-labels",
-    type: "symbol",
-    source: "txdot-districts",
 
-    layout: {
-      "text-field": ["get", "DIST_NM"],
-      "text-size": 12
-    },
+  map.on("click", "district-fill", (e) => {
+    const props = e.features && e.features[0] ? e.features[0].properties : {};
+    const districtName = props.DIST_NM || props.dist_nm || props.name || "Unknown district";
 
-    paint: {
-      "text-color": "#222"
-    }
+    new mapboxgl.Popup()
+      .setLngLat(e.lngLat)
+      .setHTML(`
+        <div style="font-family: sans-serif;">
+          <h3>${districtName}</h3>
+        </div>
+      `)
+      .addTo(map);
   });
+
+  map.on("mouseenter", "district-fill", () => {
+    map.getCanvas().style.cursor = "pointer";
+  });
+
+  map.on("mouseleave", "district-fill", () => {
+    map.getCanvas().style.cursor = "";
+  });
+
   // POPUPS
   map.on("click", "locations-layer", (e) => {
     const props = e.features[0].properties;
