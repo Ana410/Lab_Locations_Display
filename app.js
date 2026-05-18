@@ -1,7 +1,7 @@
 mapboxgl.accessToken = "pk.eyJ1Ijoic2FuamFuYXJhbTQxMCIsImEiOiJjbXBiZWx5dGkwM3pzMnNwdHdpbW1taHd1In0.z1RzG2XT6J5sqGBXLizpDA";
 
 const GEOJSON_URL =
-  "https://ana410.github.io/location-data/locations.geojson";
+  "https://ana410.github.io/location_data/locations.geojson";
 
 // -----------------------------
 // 1. TEXAS BOUNDS
