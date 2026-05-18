@@ -1,7 +1,9 @@
 mapboxgl.accessToken = "pk.eyJ1Ijoic2FuamFuYXJhbTQxMCIsImEiOiJjbXBiZWx5dGkwM3pzMnNwdHdpbW1taHd1In0.z1RzG2XT6J5sqGBXLizpDA";
 
-const GEOJSON_URL =
-  "https://ana410.github.io/location_data/locations.geojson";
+const GEOJSON_URLS = [
+  "https://ana410.github.io/location_data/locations.geojson",
+  "https://raw.githubusercontent.com/Ana410/location_data/main/locations.geojson"
+];
 
 // -----------------------------
 // 1. TEXAS BOUNDS
@@ -46,10 +48,23 @@ function isInTexasView() {
 // 5. FETCH GEOJSON
 // -----------------------------
 async function fetchGeoJSON() {
-  const res = await fetch(
-    GEOJSON_URL + "?t=" + Date.now()
-  );
-  return await res.json();
+  let lastError = null;
+
+  for (const url of GEOJSON_URLS) {
+    try {
+      const res = await fetch(url + "?t=" + Date.now());
+
+      if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+      }
+
+      return await res.json();
+    } catch (err) {
+      lastError = err;
+    }
+  }
+
+  throw lastError || new Error("Unable to load GeoJSON data");
 }
 
 // -----------------------------
