@@ -5,6 +5,9 @@ const GEOJSON_URLS = [
   "https://raw.githubusercontent.com/Ana410/location_data/main/locations.geojson"
 ];
 
+const TXDOT_DISTRICTS_URL =
+  "https://ana410.github.io/location_data/TxDOT_Districts_-495511146228322221.geojson";
+
 // -----------------------------
 // 1. TEXAS BOUNDS
 // -----------------------------
@@ -145,6 +148,10 @@ map.on("load", async () => {
     type: "geojson",
     data: data
   });
+  map.addSource("txdot-districts", {
+    type: "geojson",
+    data: TXDOT_DISTRICTS_URL
+  });
 
   // POINT LAYER
   map.addLayer({
@@ -165,7 +172,41 @@ map.on("load", async () => {
       "circle-stroke-color": "#ffffff"
     }
   });
+  map.addLayer({
+    id: "district-fill",
+    type: "fill",
+    source: "txdot-districts",
 
+    paint: {
+      "fill-color": "#888",
+      "fill-opacity": 0.08
+    }
+  });
+  map.addLayer({
+    id: "district-borders",
+    type: "line",
+    source: "txdot-districts",
+
+    paint: {
+      "line-color": "#444",
+      "line-width": 2,
+      "line-opacity": 0.95
+    }
+  });
+  map.addLayer({
+    id: "district-labels",
+    type: "symbol",
+    source: "txdot-districts",
+
+    layout: {
+      "text-field": ["get", "DIST_NM"],
+      "text-size": 12
+    },
+
+    paint: {
+      "text-color": "#222"
+    }
+  });
   // POPUPS
   map.on("click", "locations-layer", (e) => {
     const props = e.features[0].properties;
