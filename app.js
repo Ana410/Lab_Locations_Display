@@ -84,16 +84,30 @@ async function refreshData() {
   try {
     const data = await fetchGeoJSON();
 
-    const source = map.getSource("locations");
+    // Ensure the source exists and always replace its data.
+    const existing = map.getSource("locations");
 
-    if (source) {
-      source.setData(data);
+    if (existing) {
+      existing.setData(data);
+    } else {
+      map.addSource("locations", { type: "geojson", data });
     }
 
     lastFetchTime = now;
 
   } catch (err) {
     console.error("GeoJSON refresh failed:", err);
+
+    // If the dataset returns a 404 (deleted/missing), clear the map pins
+    // by replacing the source data with an empty FeatureCollection.
+    try {
+      const source = map.getSource("locations");
+      if (source && err && String(err.message).includes("404")) {
+        source.setData({ type: "FeatureCollection", features: [] });
+      }
+    } catch (clearErr) {
+      console.error("Failed to clear locations source:", clearErr);
+    }
   }
 
   isFetching = false;
@@ -122,8 +136,15 @@ map.on("load", async () => {
     type: "circle",
     source: "locations",
     paint: {
-      "circle-radius": 6,
-      "circle-color": "#007cbf",
+      "circle-radius": 8,
+      "circle-color": [
+        "match",
+        ["get", "expiring_soon"],
+        "expired", "#ff3b30",
+        "expiring_soon", "#ff9500",
+        "normal", "#2b8cff",
+        "#2b8cff"
+      ],
       "circle-stroke-width": 1,
       "circle-stroke-color": "#ffffff"
     }
@@ -143,6 +164,7 @@ map.on("load", async () => {
           <p><b>Address:</b> ${props.address || ""}</p>
           <p><b>Contact:</b> ${props.contact || ""}</p>
           <p><b>Email:</b> ${props.email || ""}</p>
+          <p><b>Expiration Date:</b> ${props.expiration|| ""}</p>
         </div>
       `)
       .addTo(map);
@@ -155,6 +177,35 @@ map.on("load", async () => {
   map.on("mouseleave", "locations-layer", () => {
     map.getCanvas().style.cursor = "";
   });
+
+  // EXPIRING SOON TOGGLE: show only labs that are expired or expiring soon
+  const expiringToggle = document.getElementById("expiring-toggle");
+  const expiringFilter = [
+    "any",
+    ["==", ["get", "expiring_soon"], "expiring_soon"]
+  ];
+
+  function applyExpiringFilter(enabled) {
+    try {
+      if (enabled) {
+        map.setFilter("locations-layer", expiringFilter);
+      } else {
+        map.setFilter("locations-layer", null);
+      }
+    } catch (err) {
+      // layer may not be ready yet; ignore
+      console.error("Failed to set filter:", err);
+    }
+  }
+
+  if (expiringToggle) {
+    // initialize based on current checkbox state
+    applyExpiringFilter(expiringToggle.checked);
+
+    expiringToggle.addEventListener("change", (ev) => {
+      applyExpiringFilter(ev.target.checked);
+    });
+  }
 
 });
 
