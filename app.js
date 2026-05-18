@@ -132,7 +132,7 @@ map.on("load", async () => {
   // POPUPS
   map.on("click", "locations-layer", (e) => {
     const props = e.features[0].properties;
-
+    console.log(props);
     new mapboxgl.Popup()
       .setLngLat(e.lngLat)
       .setHTML(`
