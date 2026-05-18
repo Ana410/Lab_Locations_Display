@@ -138,7 +138,8 @@ map.on("load", async () => {
       .setHTML(`
         <div style="font-family: sans-serif;">
           <h3>${props.name || "Unknown"}</h3>
-          <p><b>Company:</b> ${props.company || ""}</p>
+          <p><b>ID:</b> ${props.lab_id || ""}</p>
+          <p><b>Area:</b> ${props.area || ""}</p>
           <p><b>Address:</b> ${props.address || ""}</p>
           <p><b>Contact:</b> ${props.contact || ""}</p>
           <p><b>Email:</b> ${props.email || ""}</p>
