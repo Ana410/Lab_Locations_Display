@@ -44,6 +44,22 @@ function isInTexasView() {
   );
 }
 
+function formatExpirationDate(value) {
+  if (!value) return "";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return String(value);
+  }
+
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  const year = date.getFullYear();
+
+  return `${month}/${day}/${year}`;
+}
+
 // -----------------------------
 // 5. FETCH GEOJSON
 // -----------------------------
@@ -164,7 +180,7 @@ map.on("load", async () => {
           <p><b>Address:</b> ${props.address || ""}</p>
           <p><b>Contact:</b> ${props.contact || ""}</p>
           <p><b>Email:</b> ${props.email || ""}</p>
-          <p><b>Expiration Date:</b> ${props.expiration|| ""}</p>
+          <p><b>Expiration Date:</b> ${formatExpirationDate(props.expiration)}</p>
         </div>
       `)
       .addTo(map);
