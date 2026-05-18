@@ -193,7 +193,6 @@ map.on("load", async () => {
       "line-opacity": 0.95
     }
   });
-
   map.on("click", "district-fill", (e) => {
     const props = e.features && e.features[0] ? e.features[0].properties : {};
     const districtName = props.DIST_NM || props.dist_nm || props.name || "Unknown district";
