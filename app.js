@@ -243,34 +243,50 @@ map.on("load", async () => {
     map.getCanvas().style.cursor = "";
   });
 
-  // EXPIRING SOON TOGGLE: show only labs that are expired or expiring soon
-  const expiringToggle = document.getElementById("expiring-toggle");
-  const expiringFilter = [
-    "any",
-    ["==", ["get", "expiring_soon"], "expiring_soon"]
-  ];
+  // CATEGORY FILTERS: show labs based on checked categories
+  const expiredFilter = document.getElementById("expired-filter");
+  const expiringFilter = document.getElementById("expiring-filter");
+  const normalFilter = document.getElementById("normal-filter");
 
-  function applyExpiringFilter(enabled) {
+  function applyFilters() {
+    const checkedCategories = [];
+    if (expiredFilter && expiredFilter.checked) checkedCategories.push("expired");
+    if (expiringFilter && expiringFilter.checked) checkedCategories.push("expiring_soon");
+    if (normalFilter && normalFilter.checked) checkedCategories.push("normal");
+
     try {
-      if (enabled) {
-        map.setFilter("locations-layer", expiringFilter);
-      } else {
+      if (checkedCategories.length === 0) {
+        // If no filters are checked, show all
         map.setFilter("locations-layer", null);
+      } else {
+        // Build a filter that matches any of the checked categories
+        const filterConditions = checkedCategories.map(cat => [
+          "==",
+          ["get", "expiring_soon"],
+          cat
+        ]);
+        const filter = filterConditions.length === 1
+          ? filterConditions[0]
+          : ["any", ...filterConditions];
+        map.setFilter("locations-layer", filter);
       }
     } catch (err) {
-      // layer may not be ready yet; ignore
       console.error("Failed to set filter:", err);
     }
   }
 
-  if (expiringToggle) {
-    // initialize based on current checkbox state
-    applyExpiringFilter(expiringToggle.checked);
-
-    expiringToggle.addEventListener("change", (ev) => {
-      applyExpiringFilter(ev.target.checked);
-    });
+  if (expiredFilter) {
+    expiredFilter.addEventListener("change", applyFilters);
   }
+  if (expiringFilter) {
+    expiringFilter.addEventListener("change", applyFilters);
+  }
+  if (normalFilter) {
+    normalFilter.addEventListener("change", applyFilters);
+  }
+
+  // Initialize filters on load
+  applyFilters();
 
 });
 

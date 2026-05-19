@@ -14,10 +14,19 @@
 </head>
 
 <body>
-<div id="controls" style="position: absolute; top: 10px; left: 10px; z-index: 2; background: rgba(255,255,255,0.95); padding: 8px 10px; border-radius: 6px; box-shadow: 0 1px 6px rgba(0,0,0,0.15); font-family: sans-serif; font-size: 13px;">
+<div id="controls" style="position: absolute; top: 10px; left: 10px; z-index: 2; background: rgba(255,255,255,0.95); padding: 10px 12px; border-radius: 6px; box-shadow: 0 1px 6px rgba(0,0,0,0.15); font-family: sans-serif; font-size: 13px;">
+  <div style="font-weight: 600; margin-bottom: 8px;">Filters</div>
+  <label style="cursor: pointer; display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+    <input type="checkbox" id="expired-filter">
+    <span>Expired</span>
+  </label>
+  <label style="cursor: pointer; display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+    <input type="checkbox" id="expiring-filter">
+    <span>Expiring soon</span>
+  </label>
   <label style="cursor: pointer; display: flex; align-items: center; gap: 8px;">
-    <input type="checkbox" id="expiring-toggle">
-    <span>Show only expiring soon</span>
+    <input type="checkbox" id="normal-filter">
+    <span>Normal</span>
   </label>
 </div>
 <div id="legend" style="position: absolute; right: 10px; bottom: 10px; z-index: 2; background: rgba(255,255,255,0.95); padding: 10px 12px; border-radius: 6px; box-shadow: 0 1px 6px rgba(0,0,0,0.15); font-family: sans-serif; font-size: 13px; min-width: 160px;">
