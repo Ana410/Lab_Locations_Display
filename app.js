@@ -49,7 +49,7 @@ function isInTexasView() {
   );
 }
 
-function formatExpirationDate(value) {
+function formatIssueDate(value) {
   if (!value) return "";
 
   const date = new Date(value);
@@ -138,7 +138,7 @@ function focusOnLab(feature) {
         <p><b>Address:</b> ${props.address || ""}</p>
         <p><b>Contact:</b> ${props.contact || ""}</p>
         <p><b>Email:</b> ${props.email || ""}</p>
-        <p><b>Expiration Date:</b> ${formatExpirationDate(props.expiration)}</p>
+        <p><b>Issue Date:</b> ${formatIssueDate(props.issue_date)}</p>
       </div>
     `)
     .addTo(map);
@@ -181,7 +181,7 @@ function renderFilteredLabsList() {
           <div style="font-weight: 600;">${name}</div>
         </div>
         <div style="font-size: 12px; color: #666; margin-bottom: 2px;">${statusLabel}</div>
-        <div style="font-size: 12px; color: #666;">${formatExpirationDate(props.expiration)}</div>
+        <div style="font-size: 12px; color: #666;">${formatIssueDate(props.issue_date)}</div>
       </button>
     `;
   }).join("");
