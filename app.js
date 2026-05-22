@@ -32,6 +32,8 @@ const map = new mapboxgl.Map({
 let lastFetchTime = 0;
 const MIN_REFRESH_INTERVAL = 30000; // 30s throttle
 let isFetching = false;
+let currentLocationsData = null;
+let locationsPopup = null;
 
 // -----------------------------
 // 4. UTILITY: CHECK TEXAS VIEW
@@ -61,6 +63,153 @@ function formatExpirationDate(value) {
   const year = date.getFullYear();
 
   return `${month}/${day}/${year}`;
+}
+
+function getLabStatus(properties) {
+  return properties && properties.expiring_soon ? String(properties.expiring_soon) : "normal";
+}
+
+function getStatusLabel(status) {
+  if (status === "expired") return "Expired";
+  if (status === "expiring_soon") return "Expiring soon";
+  return "Normal";
+}
+
+function getStatusColor(status) {
+  if (status === "expired") return "#ff3b30";
+  if (status === "expiring_soon") return "#ff9500";
+  return "#2b8cff";
+}
+
+function getSelectedStatuses() {
+  const selectedStatuses = [];
+  const expired = document.getElementById("expired-filter");
+  const expiringSoon = document.getElementById("expiring-filter");
+  const normal = document.getElementById("normal-filter");
+
+  if (expired && expired.checked) selectedStatuses.push("expired");
+  if (expiringSoon && expiringSoon.checked) selectedStatuses.push("expiring_soon");
+  if (normal && normal.checked) selectedStatuses.push("normal");
+
+  return selectedStatuses;
+}
+
+function matchesSelectedStatuses(feature, selectedStatuses) {
+  if (!selectedStatuses.length) return true;
+
+  const status = getLabStatus(feature.properties || {});
+  return selectedStatuses.includes(status);
+}
+
+function getFilteredLabs() {
+  if (!currentLocationsData || !Array.isArray(currentLocationsData.features)) {
+    return [];
+  }
+
+  const selectedStatuses = getSelectedStatuses();
+
+  return currentLocationsData.features.filter((feature) => matchesSelectedStatuses(feature, selectedStatuses));
+}
+
+function focusOnLab(feature) {
+  if (!feature || !feature.geometry || feature.geometry.type !== "Point") return;
+
+  const coords = feature.geometry.coordinates;
+  const props = feature.properties || {};
+
+  map.flyTo({
+    center: coords,
+    zoom: Math.max(map.getZoom(), 11),
+    speed: 1.2,
+    curve: 1.4
+  });
+
+  if (locationsPopup) {
+    locationsPopup.remove();
+  }
+
+  locationsPopup = new mapboxgl.Popup({ offset: 16 })
+    .setLngLat(coords)
+    .setHTML(`
+      <div style="font-family: sans-serif;">
+        <h3>${props.name || "Unknown"}</h3>
+        <p><b>ID:</b> ${props.lab_id || ""}</p>
+        <p><b>Area:</b> ${props.area || ""}</p>
+        <p><b>Address:</b> ${props.address || ""}</p>
+        <p><b>Contact:</b> ${props.contact || ""}</p>
+        <p><b>Email:</b> ${props.email || ""}</p>
+        <p><b>Expiration Date:</b> ${formatExpirationDate(props.expiration)}</p>
+      </div>
+    `)
+    .addTo(map);
+}
+
+function renderFilteredLabsList() {
+  const panel = document.getElementById("filtered-labs-panel");
+  const list = document.getElementById("filtered-labs-list");
+
+  if (!panel || !list) return;
+
+  const selectedStatuses = getSelectedStatuses();
+
+  if (selectedStatuses.length === 0) {
+    panel.style.display = "none";
+    list.innerHTML = "";
+    return;
+  }
+
+  const labs = getFilteredLabs();
+
+  panel.style.display = "block";
+
+  if (labs.length === 0) {
+    list.innerHTML = '<div style="color: #666; line-height: 1.4;">No labs match the selected filters.</div>';
+    return;
+  }
+
+  list.innerHTML = labs.map((feature, index) => {
+    const props = feature.properties || {};
+    const name = props.name || "Unknown";
+    const status = getLabStatus(props);
+    const statusLabel = getStatusLabel(status);
+    const statusColor = getStatusColor(status);
+
+    return `
+      <button type="button" data-lab-index="${index}" style="display: block; width: 100%; text-align: left; border: 1px solid rgba(0,0,0,0.08); background: #fff; border-radius: 6px; padding: 8px 10px; margin-bottom: 6px; cursor: pointer; font: inherit; color: inherit;">
+        <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 2px;">
+          <span style="width: 10px; height: 10px; border-radius: 50%; background: ${statusColor}; display: inline-block; flex: 0 0 auto;"></span>
+          <div style="font-weight: 600;">${name}</div>
+        </div>
+        <div style="font-size: 12px; color: #666; margin-bottom: 2px;">${statusLabel}</div>
+        <div style="font-size: 12px; color: #666;">${formatExpirationDate(props.expiration)}</div>
+      </button>
+    `;
+  }).join("");
+
+  list.querySelectorAll("[data-lab-index]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const labIndex = Number(button.getAttribute("data-lab-index"));
+      const feature = labs[labIndex];
+      focusOnLab(feature);
+    });
+  });
+}
+
+function applyLocationFilter() {
+  const selectedStatuses = getSelectedStatuses();
+
+  try {
+    if (!selectedStatuses.length) {
+      map.setFilter("locations-layer", null);
+    } else {
+      const filterConditions = selectedStatuses.map((status) => ["==", ["get", "expiring_soon"], status]);
+      map.setFilter("locations-layer", filterConditions.length === 1 ? filterConditions[0] : ["any", ...filterConditions]);
+    }
+  } catch (err) {
+    console.error("Failed to set filter:", err);
+  }
+
+  renderFilteredLabsList();
 }
 
 // -----------------------------
@@ -102,6 +251,7 @@ async function refreshData() {
 
   try {
     const data = await fetchGeoJSON();
+    currentLocationsData = data;
 
     // Ensure the source exists and always replace its data.
     const existing = map.getSource("locations");
@@ -113,6 +263,7 @@ async function refreshData() {
     }
 
     lastFetchTime = now;
+    renderFilteredLabsList();
 
   } catch (err) {
     console.error("GeoJSON refresh failed:", err);
@@ -143,6 +294,7 @@ map.on("load", async () => {
 
   // LOAD INITIAL DATA
   const data = await fetchGeoJSON();
+  currentLocationsData = data;
 
   map.addSource("locations", {
     type: "geojson",
@@ -217,22 +369,7 @@ map.on("load", async () => {
 
   // POPUPS
   map.on("click", "locations-layer", (e) => {
-    const props = e.features[0].properties;
-    console.log(props);
-    new mapboxgl.Popup()
-      .setLngLat(e.lngLat)
-      .setHTML(`
-        <div style="font-family: sans-serif;">
-          <h3>${props.name || "Unknown"}</h3>
-          <p><b>ID:</b> ${props.lab_id || ""}</p>
-          <p><b>Area:</b> ${props.area || ""}</p>
-          <p><b>Address:</b> ${props.address || ""}</p>
-          <p><b>Contact:</b> ${props.contact || ""}</p>
-          <p><b>Email:</b> ${props.email || ""}</p>
-          <p><b>Expiration Date:</b> ${formatExpirationDate(props.expiration)}</p>
-        </div>
-      `)
-      .addTo(map);
+    focusOnLab(e.features[0]);
   });
 
   map.on("mouseenter", "locations-layer", () => {
@@ -248,45 +385,18 @@ map.on("load", async () => {
   const expiringFilter = document.getElementById("expiring-filter");
   const normalFilter = document.getElementById("normal-filter");
 
-  function applyFilters() {
-    const checkedCategories = [];
-    if (expiredFilter && expiredFilter.checked) checkedCategories.push("expired");
-    if (expiringFilter && expiringFilter.checked) checkedCategories.push("expiring_soon");
-    if (normalFilter && normalFilter.checked) checkedCategories.push("normal");
-
-    try {
-      if (checkedCategories.length === 0) {
-        // If no filters are checked, show all
-        map.setFilter("locations-layer", null);
-      } else {
-        // Build a filter that matches any of the checked categories
-        const filterConditions = checkedCategories.map(cat => [
-          "==",
-          ["get", "expiring_soon"],
-          cat
-        ]);
-        const filter = filterConditions.length === 1
-          ? filterConditions[0]
-          : ["any", ...filterConditions];
-        map.setFilter("locations-layer", filter);
-      }
-    } catch (err) {
-      console.error("Failed to set filter:", err);
-    }
-  }
-
   if (expiredFilter) {
-    expiredFilter.addEventListener("change", applyFilters);
+    expiredFilter.addEventListener("change", applyLocationFilter);
   }
   if (expiringFilter) {
-    expiringFilter.addEventListener("change", applyFilters);
+    expiringFilter.addEventListener("change", applyLocationFilter);
   }
   if (normalFilter) {
-    normalFilter.addEventListener("change", applyFilters);
+    normalFilter.addEventListener("change", applyLocationFilter);
   }
 
-  // Initialize filters on load
-  applyFilters();
+  // Initialize filters and side panel on load
+  applyLocationFilter();
 
 });
 
