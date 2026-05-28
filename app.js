@@ -66,30 +66,40 @@ function formatIssueDate(value) {
 }
 
 function getLabStatus(properties) {
-  return properties && properties.expiring_soon ? String(properties.expiring_soon) : "normal";
+  return properties && properties.audit_needed ? String(properties.audit_needed) : "none-needed";
 }
 
 function getStatusLabel(status) {
+  if (status === "none-needed") return "None needed";
+  if (status === "1-2 audit") return "1-2 audit";
+  if (status === "2-3 audit") return "2-3 audit";
+  if (status === "expire_audit") return "Expire audit";
   if (status === "expired") return "Expired";
-  if (status === "expiring_soon") return "Expiring soon";
-  return "Normal";
+  return "Unknown";
 }
 
 function getStatusColor(status) {
+  if (status === "none-needed") return "#34c759";
+  if (status === "1-2 audit") return "#2b8cff";
+  if (status === "2-3 audit") return "#ffcc00";
+  if (status === "expire_audit") return "#ff9500";
   if (status === "expired") return "#ff3b30";
-  if (status === "expiring_soon") return "#ff9500";
   return "#2b8cff";
 }
 
 function getSelectedStatuses() {
   const selectedStatuses = [];
+  const noneNeeded = document.getElementById("none-needed-filter");
+  const oneTwo = document.getElementById("one-two-audit-filter");
+  const twoThree = document.getElementById("two-three-audit-filter");
+  const expireAudit = document.getElementById("expire-audit-filter");
   const expired = document.getElementById("expired-filter");
-  const expiringSoon = document.getElementById("expiring-filter");
-  const normal = document.getElementById("normal-filter");
 
+  if (noneNeeded && noneNeeded.checked) selectedStatuses.push("none-needed");
+  if (oneTwo && oneTwo.checked) selectedStatuses.push("1-2 audit");
+  if (twoThree && twoThree.checked) selectedStatuses.push("2-3 audit");
+  if (expireAudit && expireAudit.checked) selectedStatuses.push("expire_audit");
   if (expired && expired.checked) selectedStatuses.push("expired");
-  if (expiringSoon && expiringSoon.checked) selectedStatuses.push("expiring_soon");
-  if (normal && normal.checked) selectedStatuses.push("normal");
 
   return selectedStatuses;
 }
@@ -202,7 +212,7 @@ function applyLocationFilter() {
     if (!selectedStatuses.length) {
       map.setFilter("locations-layer", null);
     } else {
-      const filterConditions = selectedStatuses.map((status) => ["==", ["get", "expiring_soon"], status]);
+      const filterConditions = selectedStatuses.map((status) => ["==", ["get", "audit_needed"], status]);
       map.setFilter("locations-layer", filterConditions.length === 1 ? filterConditions[0] : ["any", ...filterConditions]);
     }
   } catch (err) {
@@ -314,10 +324,12 @@ map.on("load", async () => {
       "circle-radius": 8,
       "circle-color": [
         "match",
-        ["get", "expiring_soon"],
+        ["get", "audit_needed"],
+        "none-needed", "#34c759",
+        "1-2 audit", "#2b8cff",
+        "2-3 audit", "#ffcc00",
+        "expire_audit", "#ff9500",
         "expired", "#ff3b30",
-        "expiring_soon", "#ff9500",
-        "normal", "#2b8cff",
         "#2b8cff"
       ],
       "circle-stroke-width": 1,
@@ -381,18 +393,26 @@ map.on("load", async () => {
   });
 
   // CATEGORY FILTERS: show labs based on checked categories
+  const noneNeededFilter = document.getElementById("none-needed-filter");
+  const oneTwoAuditFilter = document.getElementById("one-two-audit-filter");
+  const twoThreeAuditFilter = document.getElementById("two-three-audit-filter");
+  const expireAuditFilter = document.getElementById("expire-audit-filter");
   const expiredFilter = document.getElementById("expired-filter");
-  const expiringFilter = document.getElementById("expiring-filter");
-  const normalFilter = document.getElementById("normal-filter");
 
+  if (noneNeededFilter) {
+    noneNeededFilter.addEventListener("change", applyLocationFilter);
+  }
+  if (oneTwoAuditFilter) {
+    oneTwoAuditFilter.addEventListener("change", applyLocationFilter);
+  }
+  if (twoThreeAuditFilter) {
+    twoThreeAuditFilter.addEventListener("change", applyLocationFilter);
+  }
+  if (expireAuditFilter) {
+    expireAuditFilter.addEventListener("change", applyLocationFilter);
+  }
   if (expiredFilter) {
     expiredFilter.addEventListener("change", applyLocationFilter);
-  }
-  if (expiringFilter) {
-    expiringFilter.addEventListener("change", applyLocationFilter);
-  }
-  if (normalFilter) {
-    normalFilter.addEventListener("change", applyLocationFilter);
   }
 
   // Initialize filters and side panel on load
